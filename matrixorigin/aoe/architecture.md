@@ -81,12 +81,9 @@ Buffer manager is responsible for the allocation of buffer space. It handles all
 4. When a requestor **Unpin** a node, just call **Close** of the node handle. It will decrease the node reference count by 1. If the reference count is 0, the node will be a candidate for eviction. Node with reference count greater than 0 never be evicted.
 
 There are currently three buffer managers for different purposes in **AOE**
-1. Mutation buffer manager
-   A dedicated fixed-size buffer used by L0 transient blocks. Each block corresponds to a node in the buffer
-2. SST buffer manager
-   A dedicated fixed-size buffer used by L1 and L2 blocks. Each column within a block corresponds to a node in the buffer
-3. Index buffer manager
-   A dedicated fixed-size buffer used by indexes. Each block or a segment index corresponds to a node in the buffer
+1. Mutation buffer manager: A dedicated fixed-size buffer used by L0 transient blocks. Each block corresponds to a node in the buffer
+2. SST buffer manager: A dedicated fixed-size buffer used by L1 and L2 blocks. Each column within a block corresponds to a node in the buffer
+3. Index buffer manager: A dedicated fixed-size buffer used by indexes. Each block or a segment index corresponds to a node in the buffer
 
 ## WAL
 **Write-ahead logging** (WAL) is the key for providing **atomicity** and **durability**. All modifications should be written to a log before applied. **AOE** depends a abstract **WAL** layer on top of a more concrete **WAL** backend. There are two **WAL** roles in **AOE**:
@@ -97,8 +94,28 @@ There are currently three buffer managers for different purposes in **AOE**
 When a storage engine is used as a state machine of a raft group, **WAL** in the storage engine is unnecessary and would only add overhead. **AOE** is currently used as the underlying state machine of **MatrixOne**, which uses **Raft** consensus for replication. To share with external **Raft** log, **AOE** can use a default **WAL** backend of role **BrokerRole**
 
 ## Catalog
+**Catalog** is **AOE**'s in-memory metadata manager that manages all states of the engine, and the underlying driver is an embedded **LogStore**. **Catalog** implements a simple memory transaction database, retains a complete version chain in memory, and is compacted when it is not referenced. **Catalog** can be fully replayed from the underlying **LogStore**.
+1. DDL operation infos
+2. Table Schema infos
+3. Layout infos
+
+### Example
+![image](https://user-images.githubusercontent.com/39627130/139570327-f484858c-347c-4100-b0cc-afd03c5e6e8d.png)
+- There are 5 tables (id: 1,3,5,6,7) with the same table name "m" and only table 7 is active now.
+- Table 1 is created @ timestamp 1, soft-deleted @ timestamp 2, hard-deleted @ timestamp 9
+- Table 3 is created @ timestamp 3, soft-deleted @ timestamp 4, hard-deleted @ timestamp 5
+- Table 5 is created @ timestamp 6, soft-deleted @ timestamp 7, hard-deleted @ timestamp 8
+- Table 6 is created @ timestamp 10, **replaced** @ timestamp 11, hard-deleted @ timestamp 12
+- Table 7 is created @ timestamp 11
 
 ## LogStore
+An embedded log-structured data store. It is used as the underlying driver of **Catalog** and **WAL**.
+
+## Multi-Version Concurrency Control (MVCC)
+For any update, **AOE** create a new version of data object instead of in-place update. The concurrent read operations started at an older timestamp could still see the old version.
+
+### Example
+![image](https://user-images.githubusercontent.com/39627130/145431744-e3f52d23-7ae0-4356-801e-29807e9fc325.png)
 
 ## Column family
 
@@ -107,6 +124,8 @@ When a storage engine is used as a state machine of a raft group, **WAL** in the
 ## Split
 
 ## Cloud-native
+
+## GC
 
 # Pros & Cons
 
