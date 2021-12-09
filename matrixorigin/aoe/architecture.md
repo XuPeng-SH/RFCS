@@ -2,8 +2,8 @@
 - Status: In Progress
 - Start Date: 2021-05-10
 - Authors: [Xu Peng](https://github.com/XuPeng-SH)
-- PR:
-- Issue:
+- Implementation PR:
+- Issue for this RFC:
 
 # Summary
 
