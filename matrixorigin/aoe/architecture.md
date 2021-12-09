@@ -38,33 +38,6 @@
 ### Misc
 - **Log space**: A raft group can be considered as a log space
 
-## Write
-### DDL
-1. Equeue the incoming request
-2. Schedule the request to catalog
-3. Catalog validate the request and start a transaction Txn
-4. Prepare and save mutations to the Txn
-5. Commit the Txn to LogStore
-
-### DML
-1. Equeue the incoming request
-2. Validate the request
-3. Fetch the specified table mutation handle to process mutation request
-   1) Wrap a WAL entry and flush to the LogStore
-   2) Apply the mutation and make it public
-
-## Read
-### DDL
-1. Equeue the incoming request
-2. Schedule the request to catalog
-3. Catalog validates the request
-4. Catalog executes read options
-
-### DQL
-1. Equeue the incoming request
-2. Get a table data snapshot base on timestamp. If timestamp is missing, always get the latest snapshot
-3. Initialize table readers wrapping the snapshot for parallel loading
-
 ## Data storage
 ### Table
 **AOE** stores data represented as tables. Each table is bound to a schema consisting of numbers of column definitions. A table data is organized as a log-structured merge-tree (LSM tree).
@@ -96,14 +69,44 @@ It is very easy to add a new index to **AOE**.
 #### Segment
    ![image](https://user-images.githubusercontent.com/39627130/145402537-6500bcf4-5897-4dfa-b3fc-196d0c5835df.png)
 
-
 ## Buffer manager
+Buffer manager is responsible for the allocation of buffer space. It handles all requests for data pages and temporary blocks of the **AOE**.
+1. Each page is bound to a buffer node with a unique node ID
+2. A buffer node has two states:
+   1) Loaded
+   2) Unloaded
+3. When a requestor **Pin** a node:
+   1) If the node is in **Loaded** state, it will increase the node reference count by 1 and wrap a node handle with the page address in memory
+   2) If the node is in **Unloaded** state, it will read the page from disk|remote first, increase the node reference count by 1 and wrap a node handle with the page address in memory. When there is no left room in the buffer, some victim node will be unloaded to make room. The current replacement strategy is **LRU**
+4. When a requestor **Unpin** a node, just call **Close** of the node handle. It will decrease the node reference count by 1. If the reference count is 0, the node will be a candidate for eviction. Node with reference count greater than 0 never be evicted.
+
+There are currently three buffer managers for different purposes in **AOE**
+1. Mutation buffer manager
+   A dedicated fixed-size buffer used by L0 transient blocks. Each block corresponds to a node in the buffer
+2. SST buffer manager
+   A dedicated fixed-size buffer used by L1 and L2 blocks. Each column within a block corresponds to a node in the buffer
+3. Index buffer manager
+   A dedicated fixed-size buffer used by indexes. Each block or a segment index corresponds to a node in the buffer
 
 ## WAL
+**Write-ahead logging** (WAL) is the key for providing **atomicity** and **durability**. All modifications should be written to a log before applied. **AOE** depends a abstract **WAL** layer on top of a more concrete **WAL** backend. There are two **WAL** roles in **AOE**:
+1. HolderRole: The backend **WAL** is used as a **AOE** embedded **WAL**
+2. BrokerRole: The incoming modification requests were already written to external log and now applied to **AOE**. The backend **WAL** is used to share with external **WAL**
 
-## Catalog: In-memory metadata manager
+### Share with external WAL
+When a storage engine is used as a state machine of a raft group, **WAL** in the storage engine is unnecessary and would only add overhead. **AOE** is currently used as the underlying state machine of **MatrixOne**, which uses **Raft** consensus for replication. To share with external **Raft** log, **AOE** can use a default **WAL** backend of role **BrokerRole**
 
-## LogStore: A embedded log-structured data store
+## Catalog
+
+## LogStore
+
+## Column family
+
+## Snapshot
+
+## Split
+
+## Cloud-native
 
 # Pros & Cons
 
