@@ -83,12 +83,19 @@ In **AOE**, there is a dedicated fixed-size LRU cache for all indexes. Compared 
 Currently, **AOE** uses two index types:
 - **Zonemap**: It is automatically created for all columns. Persisted.
 - **BSI**: It should be explicitly defined for a column. Persisted.
+
 It is very easy to add a new index to **AOE**.
 
 ### Compression
 **AOE** is a column-oriented data store, very friendly to data compression. It supports per-column compression codecs and now only **LZ4** is used. You can easily obtain the meta information of compressed blocks. In **AOE**, the compression unit is a column of a block.
 
 ### Layout
+#### Block
+   ![image](https://user-images.githubusercontent.com/39627130/145402878-72f9aa0a-65f5-494a-96ff-c075065c1f01.png)
+
+#### Segment
+   ![image](https://user-images.githubusercontent.com/39627130/145402537-6500bcf4-5897-4dfa-b3fc-196d0c5835df.png)
+
 
 ## Buffer manager
 
