@@ -117,16 +117,29 @@ For any update, **AOE** create a new version of data object instead of in-place 
 ### Example
 ![image](https://user-images.githubusercontent.com/39627130/145431744-e3f52d23-7ae0-4356-801e-29807e9fc325.png)
 
-## Column family
+## Database (Column Families)
+In **AOE**, a **Table** is a **Column Family** while a **Database** is **Column Families**. The main idea behind **Column Families** is that they share the write-ahead log (Share **Log Space**), so that we can implement **Database-level** atomic writes. The old **WAL** cannot be compacted when the mutable buffer of a **Table** flushed since it may contains live data from other **Tables**. It can only be compacted when all related **Tables** mutable buffer are flushed.
+
+**AOE** supports multiple **Databases**, that is, one **AOE** instance can work with multiple **Log Spaces**. Our **MatrixOne** DBMS is built upon multi-raft and each node only needs one **AOE** engine, and each raft group corresponds to a **Database**. It is complicated and what makes it more complicated is the engine shares the external **WAL** with **Raft** log.
 
 ## Snapshot
+**AOE** can create a snapshot of **Database** at a certain time or LSN. As described in **MVCC**, a snapshoter can fetch a database snapshot and dump all related data and metadata to a specified path. **AOE** also can install snapshot files to restore to the same state as when the snapshot was created.
 
 ## Split
-
-## Cloud-native
+**AOE** can split a **Database** into the specified number of **Databases**. Currently, the segment is not splitable. Splitting corresponds to the data layer, just a reorganization of segments.
 
 ## GC
-
-# Pros & Cons
+1. Metadata compaction
+   1) In-memory version chain compaction
+   2) In-memory hard deleted metadata entry compaction
+   3) Persisted data compaction
+2. Stale data deletion
+   1) Table data with reference count equal 0
+   2) Log compaction
 
 # Feature works
+1. More index types
+2. Per-column compress codec
+3. More LSM tree levels
+4. Integrate some scan and filter operators
+5. Support deletion
